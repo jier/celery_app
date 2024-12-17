@@ -1,6 +1,6 @@
 # Celery with Redis, RabbitMQ and Flower Setup
 
-This project sets up a Celery application with Redis as the broker and backend, and Flower for monitoring. For local development. For Docker you should ***uncomment line 9 in celery.py and comment line 6**. The setup uses Docker and Docker Compose for containerization.
+This project sets up a Celery application with Redis as the broker and backend, and Flower for monitoring. For local development. For Docker you should ***uncomment line 9 in [celery.py](/celery_app/celery.py) and comment line 6**. The setup uses Docker and Docker Compose for containerization.
 
 ## Project Structure
 
@@ -30,8 +30,8 @@ celery_app
 
 - Docker
 - Docker Compose
-- Redis (link)[https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/]
-- Redis Insight (optional) (link)[https://redis.io/insight/]
+- Redis [link](https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/)
+- Redis Insight (optional) [link](https://redis.io/insight/)
 
 ### Steps to Run the Application
 
