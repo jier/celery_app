@@ -37,8 +37,8 @@ celery_app
 
 0. **Clone the repository**:
    ```sh
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone https://github.com/jier/celery_app.git
+   cd celery_app
    ```
 #### Container  step
 
@@ -54,7 +54,7 @@ celery_app
 
 #### Local Step
 
-1. **Start celery in one terminalk**:
+1. **Start celery in one terminal**:
    ```sh
    celery -A celery_app.celery worker --pool eventlet -c 4 -l info 
    ```
