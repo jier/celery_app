@@ -54,9 +54,12 @@ celery_app
 
 #### Local Step
 
-0. **Start Redis service, if installed via brew(MacOS)**:
+0. **Start Redis service,**:
    ```sh
+   # MacOs Installed with brew
    brew services start redis
+   # Linux and WSL2
+   sudo service redis-server start
    ```
 
 1. **Start celery in one terminal**:
