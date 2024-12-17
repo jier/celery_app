@@ -1,0 +1,47 @@
+services:
+  rabbitmq:
+    image: 'rabbitmq:3-management'
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: 'redis:latest'
+    ports:
+      - '6379:6379'
+
+  flower:
+    image: 'mher/flower'
+    ports:
+      - '5555:5555'
+    command: celery --broker=amqp://rabbitmq:5672// flower
+    environment:
+      - CELERY_BROKER_URL=amqp://rabbitmq
+      - CELERY_RESULT_BACKEND=redis://redis
+    depends_on:
+      celery:
+        condition: service_started
+
+  celery:
+    build: .
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  celery_beat:
+    build: .
+    command: celery -A celery_app.celery beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      celery:
+        condition: service_started
