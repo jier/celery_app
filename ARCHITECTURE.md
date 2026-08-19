@@ -8,8 +8,8 @@
                          │                      │
   Browser ──POST /imports─▶ FastAPI ──Storage──▶ import-files/
        │                 │  │                    │
-       │                 │  └──Postgres──▶ import_jobs
-       │                 │  │              products
+       │  Dashboard       │  └──Postgres──▶ import_jobs
+       │  (TS+HTML+CSS)   │  │              products
        │                 │  └──Auth──────▶ JWT verification
        │                 │
        │                 │   Redis
@@ -88,7 +88,7 @@ Each external service is hidden behind a Protocol interface:
        │   └──────┴────────┴──────────────┘    │
        │                                       │
        │   ┌──────────┐                        │
-       │   │ Dashboard │ (Vue/Ionic PWA)       │
+       │   │ Dashboard │ (TS + HTML + CSS)     │
        │   │ - Login   │                       │
        │   │ - Upload  │                       │
        │   │ - Jobs    │                       │
@@ -99,7 +99,7 @@ Each external service is hidden behind a Protocol interface:
 
 ### Planned Additions
 
-- **Dashboard**: Vue/Ionic PWA for login, CSV upload, live job progress, and product listing.
+- **Dashboard**: Pure TypeScript + HTML + CSS. No framework. Served as static files from FastAPI. Uses supabase-js for auth, upload, and Realtime job-progress subscriptions. No build pipeline — just a browser and the Supabase client.
 - **OpenTelemetry**: Traces across API → Redis → Worker → Supabase. Structured logs with trace context. RED metrics.
 - **Containerization**: `docker compose` with FastAPI, Celery worker, Redis, optional Beat and Flower.
 - **RabbitMQ comparison**: Optional broker profile for comparing delivery semantics and monitoring.
