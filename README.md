@@ -20,7 +20,9 @@ Browser → FastAPI → Supabase (Postgres + Storage + Auth + Realtime)
 ### Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) and Python 3.13+
-- [Docker](https://docs.docker.com/) (for Supabase local)
+- [Docker](https://docs.docker.com/) — the `supabase` CLI runs Postgres, Auth, Storage, and
+  Realtime as Docker containers. The `supabase` Homebrew package is the orchestrator,
+  not the database itself. No Docker means no local Supabase.
 - [Redis](https://redis.io/) running locally on port 6379
 - [Node.js](https://nodejs.org/) (for TypeScript compilation)
 
@@ -61,7 +63,10 @@ uv run celery -A workflow_app.celery_app worker --pool solo --loglevel info
 
 Visit `http://127.0.0.1:8000` in your browser. Login, upload a CSV from `tests/fixtures/`, and watch the import progress live via Supabase Realtime.
 
-### 7. Register a User and Upload (CLI)
+### 7. Or: CLI Alternative
+
+The dashboard at `http://127.0.0.1:8000` handles login, upload, and progress. Use these
+curl commands only if you prefer the terminal:
 
 The `SUPABASE_ANON_KEY` is in your `.env` file or the `supabase start` output.
 
