@@ -1,10 +1,15 @@
 from fastapi import FastAPI
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from workflow_app.api import create_app
 from workflow_app.dispatcher import CeleryDispatcher
 from workflow_app.settings import Settings
 from workflow_app.supabase_auth import SupabaseAuthenticator
 from workflow_app.supabase_store import SupabaseImportStore, SupabaseProductStore
+from workflow_app.telemetry import get_logger, setup_telemetry
+
+setup_telemetry()
+logger = get_logger(__name__)
 
 settings = Settings()
 
@@ -23,3 +28,6 @@ app: FastAPI = create_app(
         service_role_key=settings.supabase_service_role_key,
     ),
 )
+
+FastAPIInstrumentor.instrument_app(app)
+logger.info("observable-imports API started")
