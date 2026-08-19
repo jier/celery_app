@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
@@ -42,3 +43,10 @@ class ImportJob(BaseModel):
             failed_rows=int(row.get("failed_rows", 0)),
             created_at=created_at_val,
         )
+
+
+class ProductRow(BaseModel):
+    sku: str
+    name: str
+    price: Decimal
+    quantity: int

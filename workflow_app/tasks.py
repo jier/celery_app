@@ -4,8 +4,8 @@ from io import StringIO
 from typing import Protocol
 from uuid import UUID
 
-from workflow_app.models import ImportJob, JobStatus
-from workflow_app.validation import ProductRow, ProductRowValidationError, validate_product_row
+from workflow_app.models import ImportJob, JobStatus, ProductRow
+from workflow_app.validation import ProductRowValidationError, validate_product_row
 
 
 class ImportJobStore(Protocol):

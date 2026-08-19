@@ -1,9 +1,9 @@
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
 from supabase import create_client
-from workflow_app.models import ImportJob
-from workflow_app.validation import ProductRow
+from workflow_app.models import ImportJob, ProductRow
 
 BUCKET = "import-files"
 
@@ -58,6 +58,20 @@ class SupabaseImportStore:
             return None
         return ImportJob.from_supabase_row(result.data[0])
 
+    async def list(self, owner_id: UUID) -> list[ImportJob]:
+        client = self._client()
+        result = (
+            await client.table("import_jobs")
+            .select("*")
+            .eq(
+                "owner_id",
+                str(owner_id),
+            )
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return [ImportJob.from_supabase_row(row) for row in result.data]
+
 
 class SupabaseProductStore:
     def __init__(self, url: str, service_role_key: str) -> None:
@@ -80,6 +94,27 @@ class SupabaseProductStore:
             )
             .execute()
         )
+
+    async def list(self, owner_id: UUID) -> list[ProductRow]:
+        result = (
+            await self._client.table("products")
+            .select("*")
+            .eq(
+                "owner_id",
+                str(owner_id),
+            )
+            .order("name")
+            .execute()
+        )
+        return [
+            ProductRow(
+                sku=str(row["sku"]),
+                name=str(row["name"]),
+                price=Decimal(str(row["price"])),
+                quantity=int(row["quantity"]),
+            )
+            for row in result.data
+        ]
 
 
 def download_csv(url: str, service_role_key: str, owner_id: UUID, job_id: UUID) -> bytes:

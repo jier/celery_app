@@ -1,9 +1,8 @@
 from decimal import Decimal
 from uuid import UUID
 
-from workflow_app.models import ImportJob, JobStatus
+from workflow_app.models import ImportJob, JobStatus, ProductRow
 from workflow_app.tasks import process_import
-from workflow_app.validation import ProductRow
 
 
 class FakeJobStore:
@@ -38,7 +37,6 @@ class FakeJobStore:
 class FakeProductStore:
     def __init__(self) -> None:
         self.upserted: list[ProductRow] = []
-        self.failures: list[tuple[ProductRow, str | None]] = []
 
     async def upsert(self, owner_id: UUID, product: ProductRow) -> None:
         del owner_id

@@ -1,14 +1,6 @@
 from collections.abc import Mapping
-from dataclasses import dataclass
-from decimal import Decimal
 
-
-@dataclass(frozen=True, slots=True)
-class ProductRow:
-    sku: str
-    name: str
-    price: Decimal
-    quantity: int
+from workflow_app.models import ProductRow
 
 
 class ProductRowValidationError(ValueError):
@@ -18,6 +10,8 @@ class ProductRowValidationError(ValueError):
 
 
 def validate_product_row(row: Mapping[str, str]) -> ProductRow:
+    from decimal import Decimal
+
     sku = row["sku"].strip().upper()
     name = row["name"].strip()
     price = Decimal(row["price"].strip())

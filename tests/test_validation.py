@@ -2,7 +2,8 @@ from decimal import Decimal
 
 import pytest
 
-from workflow_app.validation import ProductRow, ProductRowValidationError, validate_product_row
+from workflow_app.models import ProductRow
+from workflow_app.validation import ProductRowValidationError, validate_product_row
 
 
 def test_validate_product_row_normalizes_valid_inventory_data() -> None:

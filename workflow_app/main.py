@@ -4,7 +4,7 @@ from workflow_app.api import create_app
 from workflow_app.dispatcher import CeleryDispatcher
 from workflow_app.settings import Settings
 from workflow_app.supabase_auth import SupabaseAuthenticator
-from workflow_app.supabase_store import SupabaseImportStore
+from workflow_app.supabase_store import SupabaseImportStore, SupabaseProductStore
 
 settings = Settings()
 
@@ -18,4 +18,8 @@ app: FastAPI = create_app(
         key=settings.supabase_service_role_key,
     ),
     dispatcher=CeleryDispatcher(),
+    products=SupabaseProductStore(
+        url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+    ),
 )

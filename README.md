@@ -22,6 +22,7 @@ Browser → FastAPI → Supabase (Postgres + Storage + Auth + Realtime)
 - [uv](https://docs.astral.sh/uv/) and Python 3.13+
 - [Docker](https://docs.docker.com/) (for Supabase local)
 - [Redis](https://redis.io/) running locally on port 6379
+- [Node.js](https://nodejs.org/) (for TypeScript compilation)
 
 ### 1. Start Services
 
@@ -36,19 +37,31 @@ redis-server            # or: brew services start redis
 uv sync
 ```
 
-### 3. Start API
+### 3. Compile Dashboard
+
+```bash
+npx --package typescript tsc
+# or in watch mode:
+npx --package typescript tsc --watch
+```
+
+### 4. Start API
 
 ```bash
 uv run uvicorn workflow_app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### 4. Start Worker
+### 5. Start Worker
 
 ```bash
 uv run celery -A workflow_app.celery_app worker --pool solo --loglevel info
 ```
 
-### 5. Register a User and Upload
+### 6. Open Dashboard
+
+Visit `http://127.0.0.1:8000` in your browser. Login, upload a CSV from `tests/fixtures/`, and watch the import progress live via Supabase Realtime.
+
+### 7. Register a User and Upload (CLI)
 
 The `SUPABASE_ANON_KEY` is in your `.env` file or the `supabase start` output.
 
