@@ -97,7 +97,8 @@ Each external service is hidden behind a Protocol interface:
 ### Planned Additions
 
 - **Containerization**: `docker compose` with FastAPI, Celery worker, Redis, optional Beat and Flower.
-  Includes an OTLP collector so traces from API and worker land in one place.
+  Includes an OTLP collector (Grafana Alloy or similar) so traces from API and worker land in one
+  place for visualization with Grafana/Tempo.
 - **RabbitMQ comparison**: Optional broker profile for comparing delivery semantics and monitoring.
 - **Retries & idempotency**: Automatic retry with backoff for transient failures. The unique constraint
   on `(owner_id, sku)` already provides idempotent upserts; retries would add resilience to transient

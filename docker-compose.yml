@@ -1,47 +1,56 @@
 services:
-  rabbitmq:
-    image: 'rabbitmq:3-management'
+  api:
+    build: .
     ports:
-      - '5672:5672'
-      - '15672:15672'
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SUPABASE_URL=http://host.docker.internal:54321
+    command: uv run uvicorn workflow_app.main:app --host 0.0.0.0 --port 8000
+
+  worker:
+    build: .
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SUPABASE_URL=http://host.docker.internal:54321
+    command: uv run celery -A workflow_app.celery_app worker --pool solo --loglevel info
 
   redis:
-    image: 'redis:latest'
+    image: redis:7-alpine
     ports:
-      - '6379:6379'
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   flower:
-    image: 'mher/flower'
+    build: .
+    env_file: .env
     ports:
-      - '5555:5555'
-    command: celery --broker=amqp://rabbitmq:5672// flower
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
-      - CELERY_BROKER_URL=amqp://rabbitmq
-      - CELERY_RESULT_BACKEND=redis://redis
-    depends_on:
-      celery:
-        condition: service_started
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    command: uv run celery -A workflow_app.celery_app flower --broker_api redis://redis:6379/0
 
-  celery:
-    build: .
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4318:4318"
     volumes:
-      - .:/app
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-
-  celery_beat:
-    build: .
-    command: celery -A celery_app.celery beat --loglevel=info
-    volumes:
-      - .:/app
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      celery:
-        condition: service_started
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    command: ["--config=/etc/otel-collector-config.yaml"]

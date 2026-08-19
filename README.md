@@ -14,6 +14,7 @@ Browser → FastAPI → Supabase (Postgres + Storage + Auth + Realtime)
 - **Worker** (`workflow_app/celery_app.py`) picks up jobs from Redis, validates each CSV row, upserts valid products into Postgres, and updates job progress.
 - **Auth** verifies the caller's Supabase JWT token.
 - **RLS** scopes every job and product to its owner.
+- **Observability** OpenTelemetry traces across API → Redis → Worker → Supabase, plus structured logs with trace context.
 
 ## Quick Start
 
@@ -90,12 +91,26 @@ curl -H "Authorization: Bearer $TOKEN" \
   http://127.0.0.1:8000/imports/<job-id>
 ```
 
+## Docker Compose
+
+For a self-contained environment with an OTLP collector for traces:
+
+```bash
+docker compose up
+```
+
+This starts: API, Celery worker, Redis, Flower, and an OTLP Collector.
+Traces from both API and worker are sent to `http://localhost:4318/v1/traces`
+and printed to the console for local development.
+
 ## API
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/imports` | Upload a CSV file. Returns 202 with job details. |
+| `GET` | `/imports` | List all import jobs. |
 | `GET` | `/imports/{job_id}` | Get job status and row counts. |
+| `GET` | `/products` | List imported products. |
 
 All endpoints require `Authorization: Bearer <access_token>`.
 
