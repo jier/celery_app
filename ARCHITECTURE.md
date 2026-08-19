@@ -1,6 +1,6 @@
 # Architecture
 
-## Current (v0.1)
+## Current (v0.2)
 
 ```
                          ┌──────────────────────┐
@@ -19,7 +19,10 @@
        │                         │
        │                         └──▶ import_jobs (update status)
        │
-       └── Realtime ◀── import_jobs changes ◀── Postgres
+       ├── Realtime ◀── import_jobs changes ◀── Postgres
+       │
+       │   OpenTelemetry
+       └──▶ API span ──▶ Redis send ──▶ Worker span ──▶ Supabase calls
 ```
 
 ### Component Boundaries
@@ -81,12 +84,6 @@ Each external service is hidden behind a Protocol interface:
        │   │ (opt)     │ (opt)    │ (external)│ │
        │   └──────────┴──────────┴───────────┘ │
        │                                       │
-       │   OpenTelemetry                        │
-       │   ┌──────┬────────┬──────────────┐    │
-       │   │ API  │ Worker │ Supabase     │    │
-       │   │ span │ span   │ HTTP calls   │    │
-       │   └──────┴────────┴──────────────┘    │
-       │                                       │
        │   ┌──────────┐                        │
        │   │ Dashboard │ (TS + HTML + CSS)     │
        │   │ - Login   │                       │
@@ -99,8 +96,9 @@ Each external service is hidden behind a Protocol interface:
 
 ### Planned Additions
 
-- **Dashboard**: Pure TypeScript + HTML + CSS. No framework. Served as static files from FastAPI. Uses supabase-js for auth, upload, and Realtime job-progress subscriptions. No build pipeline — just a browser and the Supabase client.
-- **OpenTelemetry**: Traces across API → Redis → Worker → Supabase. Structured logs with trace context. RED metrics.
 - **Containerization**: `docker compose` with FastAPI, Celery worker, Redis, optional Beat and Flower.
+  Includes an OTLP collector so traces from API and worker land in one place.
 - **RabbitMQ comparison**: Optional broker profile for comparing delivery semantics and monitoring.
-- **Retries & idempotency**: Automatic retry with backoff for transient failures. Idempotent product upserts via `(owner_id, sku)` unique constraint.
+- **Retries & idempotency**: Automatic retry with backoff for transient failures. The unique constraint
+  on `(owner_id, sku)` already provides idempotent upserts; retries would add resilience to transient
+  network or warehouse issues.
