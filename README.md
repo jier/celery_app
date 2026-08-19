@@ -50,10 +50,12 @@ uv run celery -A workflow_app.celery_app worker --pool solo --loglevel info
 
 ### 5. Register a User and Upload
 
+The `SUPABASE_ANON_KEY` is in your `.env` file or the `supabase start` output.
+
 ```bash
 # Create an account through Supabase's local auth endpoint
 curl -X POST http://127.0.0.1:54321/auth/v1/signup \
-  -H "apikey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" \
   -d '{"email": "demo@example.com", "password": "demodemo123"}'
 
