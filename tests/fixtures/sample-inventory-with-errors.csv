@@ -1,0 +1,5 @@
+sku,name,price,quantity
+VALID-001,Genuine Part,15.99,200
+ ,Missing SKU,5.00,10
+BAD-002,,-1.00,5
+BAD-003,Negative Qty,3.50,-3
