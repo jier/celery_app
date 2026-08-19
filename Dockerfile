@@ -4,11 +4,10 @@ FROM python:3.11
 # Set the working directory
 WORKDIR /app
 
-# Copy the requirements to the container
-COPY requirements.txt .
-
-# Install the required Python packages
-RUN pip install --no-cache-dir -r requirements.txt
+# TODO: Replace with uv-based install when containerizing.
+# The project now uses uv + pyproject.toml; requirements.txt has been removed.
+# COPY pyproject.toml uv.lock .
+# RUN uv sync --frozen --no-dev
 
 
 # Copy the rest of the application code to the container
