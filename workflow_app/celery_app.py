@@ -4,7 +4,7 @@ from celery import Celery
 
 from workflow_app.models import ImportJob
 from workflow_app.settings import Settings  # type: ignore[import-untyped]
-from workflow_app.supabase_store import SupabaseProductStore
+from workflow_app.supabase_store import SupabaseProductStore, download_csv
 from workflow_app.tasks import process_import
 
 settings = Settings()
@@ -26,6 +26,8 @@ class SupabaseImportJobStore:
         from supabase import create_client
 
         self._client = create_client(url, service_role_key)
+        self._url = url
+        self._service_role_key = service_role_key
 
     def get_job(self, job_id: UUID) -> ImportJob | None:
         result = self._client.table("import_jobs").select("*").eq("id", str(job_id)).execute()
@@ -34,8 +36,10 @@ class SupabaseImportJobStore:
         return ImportJob.from_supabase_row(result.data[0])  # type: ignore[arg-type]
 
     def get_content(self, job_id: UUID) -> bytes:
-        del job_id
-        return b""
+        job = self.get_job(job_id)
+        if job is None:
+            return b""
+        return download_csv(self._url, self._service_role_key, job.owner_id, job_id)
 
     def update_job(self, job: ImportJob) -> None:
         self._client.table("import_jobs").update(

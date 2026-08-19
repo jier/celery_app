@@ -5,6 +5,8 @@ from supabase import create_client
 from workflow_app.models import ImportJob
 from workflow_app.validation import ProductRow
 
+BUCKET = "import-files"
+
 
 class SupabaseImportStore:
     def __init__(self, url: str, key: str, access_token: str = "") -> None:
@@ -31,7 +33,14 @@ class SupabaseImportStore:
             )
             .execute()
         )
-        return ImportJob.from_supabase_row(result.data[0])
+        job = ImportJob.from_supabase_row(result.data[0])
+        storage_path = f"{owner_id}/{job.id}.csv"
+        await client.storage.from_(BUCKET).upload(
+            storage_path,
+            content,
+            {"content-type": "text/csv"},
+        )
+        return job
 
     async def get(self, owner_id: UUID, job_id: UUID) -> ImportJob | None:
         client = self._client()
@@ -53,6 +62,8 @@ class SupabaseImportStore:
 class SupabaseProductStore:
     def __init__(self, url: str, service_role_key: str) -> None:
         self._client = create_client(url, service_role_key)
+        self._url = url
+        self._service_role_key = service_role_key
 
     async def upsert(self, owner_id: UUID, product: ProductRow) -> None:
         await (
@@ -69,3 +80,9 @@ class SupabaseProductStore:
             )
             .execute()
         )
+
+
+def download_csv(url: str, service_role_key: str, owner_id: UUID, job_id: UUID) -> bytes:
+    client = create_client(url, service_role_key)
+    storage_path = f"{owner_id}/{job_id}.csv"
+    return client.storage.from_(BUCKET).download(storage_path)

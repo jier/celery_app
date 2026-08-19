@@ -1,149 +1,132 @@
-# Celery with Redis, RabbitMQ and Flower Setup
+# Observable Product Inventory Imports
 
-This project sets up a Celery application with Redis as the broker and backend, and Flower for monitoring. For local development. For Docker you should ***uncomment line 9 in [celery.py](/celery_app/celery.py) and comment line 6**. The setup uses Docker and Docker Compose for containerization.
+Import product inventory from CSV files with live progress, powered by Celery and Supabase.
 
-## Project Structure
+## Architecture
 
-```tree
-celery_app
-├── Dockerfile
-├── celery_app
-│   ├── __init__.py
-│   ├── celery.py
-│   └── tasks.py
-├── docker-compose.yml
-└── requirements.txt
+```
+Browser → FastAPI → Supabase (Postgres + Storage + Auth + Realtime)
+                ↘
+              Redis → Celery Worker → Supabase Postgres
 ```
 
-## Files
+- **API** (`workflow_app/main.py`) receives CSV uploads, stores the file in Supabase Storage, creates a job record, and enqueues processing.
+- **Worker** (`workflow_app/celery_app.py`) picks up jobs from Redis, validates each CSV row, upserts valid products into Postgres, and updates job progress.
+- **Auth** verifies the caller's Supabase JWT token.
+- **RLS** scopes every job and product to its owner.
 
-- **Dockerfile**: Defines the Docker image for the Celery worker.
-- **celery_app/celery.py**: Initializes the Celery application.
-- **celery_app/tasks.py**: Defines the Celery tasks.
-- **celery_app/__init__.py**: Ensures the Celery app is imported.
-- **docker-compose.yml**: Defines the services for Docker Compose.
-- **requirements.txt**: Lists the Python dependencies.
-
-## Setup Instructions
+## Quick Start
 
 ### Prerequisites
 
-- Docker
-- Docker Compose
-- Redis [link](https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/)
-- Redis Insight (optional) [link](https://redis.io/insight/)
+- [uv](https://docs.astral.sh/uv/) and Python 3.13+
+- [Docker](https://docs.docker.com/) (for Supabase local)
+- [Redis](https://redis.io/) running locally on port 6379
 
-### Steps to Run the Application
+### 1. Start Services
 
-0. **Clone the repository**:
-   ```sh
-   git clone https://github.com/jier/celery_app.git
-   cd celery_app
-   ```
-#### Container  step
-
-1. **Build the Docker images**:
-   ```sh
-   docker-compose build
-   ```
-
-2. **Start the services**:
-   ```sh
-   docker-compose up
-   ```
-
-#### Local Step
-
-0. **Start Redis service,**:
-   ```sh
-   # MacOs Installed with brew
-   brew services start redis
-   # Linux and WSL2
-   sudo service redis-server start
-   ```
-
-1. **Start celery in one terminal**:
-   ```sh
-   celery -A celery_app.celery worker --pool eventlet -c 4 -l info 
-   ```
-2. **Start flower in another terminal**:
-   ```sh
-   celery -A celery_app.celery flower -l debug
-   ```
-3. **Start celery beat in another terminal**:
-   ```sh
-   celery -A celery_app.celery beat -l debug
-   ```
-
-### Services
-
-- **redis**: Redis server for message brokering and result storage. For local case
-- **rabbitMQ**: message Broker. For container Case and Redis Result storare.
-- **flower**: Flower monitoring tool for Celery.
-- **celery**: Celery worker.
-- **celery_beat**: Celery Beat scheduler for periodic tasks.
-
-### Accessing Flower
-
-Flower can be accessed at `http://localhost:5555` to monitor the Celery tasks. This goes for local start up commands as docker commands.
-
-## Task Definitions
-
-### `celery_app/tasks.py`
-
-- **addition**: Adds two random numbers between 0 and 10.
-- **call_addition**: Calls the `addition` task every 10 seconds.
--  **mutlitplication**: Mutliply two random numbers between 1 and 11.
-- **call_multiplication**: Calls the `multiplication` task every 10 seconds.
-- **division**: Divides two random numbers between 1 and 11.
-- **call_division**: Calls the `division` task every 10 seconds.
-
-### Example Task
-
-```python
-@app.task(name='celery_app.addition', bind=True)
-def addition(*args, **kwargs):
-    num1 = np.random.randint(0, 11)
-    num2 = np.random.randint(0, 11)
-    result = num1 + num2
-    print(f'Adding {num1} + {num2} = {result}')
-    return result
+```bash
+supabase start          # Postgres, Auth, Storage, Realtime
+redis-server            # or: brew services start redis
 ```
 
-### Example Beat Task
+### 2. Install Dependencies
 
-```python
-@app.task(name='call_addition', bind=True)
-def call_addition(*args, **kwargs):
-    addition.apply_async()
-```
->Note both task and beat tasks contains params arguments. Without them celery will result in an error complaining about the mismatch of function definitions done during the intitialisation of the app.
-## Configuration
-
-### `celery_app/celery.py`
-
-- **Broker URL**: `redis://127.0.0.1:6379/0` ->Local use case
-- **Backend URL**: `redis://127.0.0.1:6379/0` ->Local use case
-- **Broker URL**: `amqp://rabbitmq` ->Container use case
-- **Backend URL**: `redis://redis` ->Container use case
-- **Beat Schedule**: Runs `call_addition`, `call_multiplication`,`call_division` task every 10 seconds.
-
-### `docker-compose.yml`
-
-- **Redis**: Exposes port `6379`.
-- **RabbitMQ**: Exposes port `5672` for applications to connect and `15672` for management port
-- **Flower**: Exposes port `5555`.
-- **Celery Worker**: Runs the Celery worker.
-- **Celery Beat**: Runs the Celery Beat scheduler.
-
-## Notes
-
-- Ensure Docker and Docker Compose are installed and running on your machine.
-- Adjust the configurations as needed for your environment.
-
-## License
-
-This project is licensed under the MIT License.
+```bash
+uv sync
 ```
 
-This `README.md` file provides a comprehensive guide to setting up and running your Celery application with Redis and Flower. Let me know if you need any further assistance!
+### 3. Start API
+
+```bash
+uv run uvicorn workflow_app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+### 4. Start Worker
+
+```bash
+uv run celery -A workflow_app.celery_app worker --pool solo --loglevel info
+```
+
+### 5. Register a User and Upload
+
+```bash
+# Create an account through Supabase's local auth endpoint
+curl -X POST http://127.0.0.1:54321/auth/v1/signup \
+  -H "apikey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "demo@example.com", "password": "demodemo123"}'
+
+# Extract the access_token from the response, then:
+TOKEN="<access_token>"
+
+# Upload a CSV
+curl -i -X POST http://127.0.0.1:8000/imports \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@tests/fixtures/sample-inventory.csv"
+
+# Check status (use the job id from the upload response)
+curl -H "Authorization: Bearer $TOKEN" \
+  http://127.0.0.1:8000/imports/<job-id>
+```
+
+## API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/imports` | Upload a CSV file. Returns 202 with job details. |
+| `GET` | `/imports/{job_id}` | Get job status and row counts. |
+
+All endpoints require `Authorization: Bearer <access_token>`.
+
+## CSV Format
+
+Column headers must match exactly:
+
+```csv
+sku,name,price,quantity
+SKU-001,Blue Widget,12.50,150
+```
+
+- `sku` and `name` are required strings.
+- `price` must be zero or greater.
+- `quantity` must be zero or greater (integer).
+- SKUs are case-insensitive and whitespace-trimmed. Duplicate SKUs within the same owner are upserted.
+
+## Project Structure
+
+```
+celery_app/
+├── workflow_app/
+│   ├── api.py            # FastAPI routes and pluggable protocols
+│   ├── celery_app.py     # Celery app, worker task, and job store
+│   ├── dispatcher.py     # Enqueues tasks via Celery
+│   ├── main.py           # Wired entrypoint (auth + stores + dispatcher)
+│   ├── models.py         # Pydantic models: User, ImportJob, JobStatus
+│   ├── settings.py       # Env-var configuration (pydantic-settings)
+│   ├── supabase_auth.py  # JWT token verification adapter
+│   ├── supabase_store.py # Postgres + Storage adapters
+│   ├── tasks.py          # CSV parsing, validation, and upsert logic
+│   └── validation.py     # Product-row normalization and validation
+├── tests/
+│   ├── fixtures/         # Sample CSV files for testing
+│   ├── test_api.py       # Import creation and status endpoints
+│   ├── test_fixtures.py  # CSV fixture integration tests
+│   ├── test_tasks.py     # Task contract test
+│   └── test_validation.py
+├── supabase/
+│   └── migrations/       # SQL schema and RLS policies
+├── pyproject.toml
+└── .env.example
+```
+
+## Development
+
+```bash
+uv sync                     # install all dependencies
+uv run pre-commit install   # enable git hooks
+uv run pytest               # run tests
+uv run pre-commit run -a    # run all checks
+```
+
+Pre-commit hooks: ruff (check + format), mypy, pytest, duplicate code detection.
