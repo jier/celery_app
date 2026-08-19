@@ -3,7 +3,7 @@ from uuid import UUID
 from celery import Celery, signals
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 
-from workflow_app.models import ImportJob
+from workflow_app.models import ImportJob, JobStatus
 from workflow_app.settings import Settings  # type: ignore[import-untyped]
 from workflow_app.supabase_store import SupabaseProductStore, download_csv
 from workflow_app.tasks import process_import
@@ -25,6 +25,8 @@ app.conf.accept_content = ["json"]
 app.conf.result_serializer = "json"
 app.conf.timezone = "UTC"
 app.conf.enable_utc = True
+
+RETRYABLE = (ConnectionError, TimeoutError)
 
 CeleryInstrumentor().instrument()
 
@@ -60,7 +62,15 @@ class SupabaseImportJobStore:
         ).eq("id", str(job.id)).execute()
 
 
-@app.task(bind=True, name="process_import", max_retries=0)
+@app.task(
+    bind=True,
+    name="process_import",
+    max_retries=3,
+    default_retry_delay=1,
+    autoretry_for=RETRYABLE,
+    retry_backoff=True,
+    retry_backoff_max=30,
+)
 def process_import_task(self, job_id: str) -> None:  # type: ignore[no-untyped-def]
     with tracer.start_as_current_span("process_import") as span:
         span.set_attribute("job.id", job_id)
@@ -74,9 +84,36 @@ def process_import_task(self, job_id: str) -> None:  # type: ignore[no-untyped-d
         )
         job = job_store.get_job(UUID(job_id))
         filename = job.filename if job else "unknown"
-        logger.info("Processing import", job_id=job_id, filename=filename)
-        process_import(UUID(job_id), job_store=job_store, product_store=product_store)
-        logger.info("Import complete", job_id=job_id)
+        logger.info(
+            "Processing import",
+            job_id=job_id,
+            filename=filename,
+            retry=self.request.retries,
+        )
+        try:
+            process_import(UUID(job_id), job_store=job_store, product_store=product_store)
+        except RETRYABLE as exc:
+            logger.warning(
+                "Transient failure, retrying",
+                job_id=job_id,
+                retry=self.request.retries,
+                error=str(exc),
+            )
+            raise
+        logger.info("Import complete", job_id=job_id, retries=self.request.retries)
+
+
+@app.task(bind=True, name="process_import_failed")
+def process_import_failed(self, job_id: str) -> None:  # type: ignore[no-untyped-def]
+    job_store = SupabaseImportJobStore(
+        url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+    )
+    job = job_store.get_job(UUID(job_id))
+    if job is not None:
+        job.status = JobStatus.FAILED
+        job_store.update_job(job)
+    logger.error("Import permanently failed", job_id=job_id)
 
 
 @signals.worker_ready.connect

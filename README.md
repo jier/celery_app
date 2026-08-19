@@ -14,6 +14,8 @@ Browser → FastAPI → Supabase (Postgres + Storage + Auth + Realtime)
 - **Worker** (`workflow_app/celery_app.py`) picks up jobs from Redis, validates each CSV row, upserts valid products into Postgres, and updates job progress.
 - **Auth** verifies the caller's Supabase JWT token.
 - **RLS** scopes every job and product to its owner.
+- **Retries** transient failures (network, DB) retry with exponential backoff (max 3). Permanent failures mark the job as `failed`.
+- **Idempotency** re-importing the same SKU updates quantity and price, never duplicates.
 - **Observability** OpenTelemetry traces across API → Redis → Worker → Supabase, plus structured logs with trace context.
 
 ## Quick Start

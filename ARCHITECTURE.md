@@ -1,6 +1,6 @@
 # Architecture
 
-## Current (v0.2)
+## Current (v0.3)
 
 ```
                          ┌──────────────────────┐
@@ -94,12 +94,17 @@ Each external service is hidden behind a Protocol interface:
        └───────────────────────────────────────┘
 ```
 
+### Implemented
+
+- **Retries**: Celery tasks auto-retry transient failures (`ConnectionError`, `TimeoutError`) with
+  exponential backoff (max 3 attempts, starting at 1s, capped at 30s). Permanently failed imports are
+  marked as `failed`.
+- **Idempotency**: Products are upserted by `(owner_id, sku)`. Re-importing the same CSV updates
+  existing rows rather than creating duplicates. Safe to retry any import.
+
 ### Planned Additions
 
-- **Containerization**: `docker compose` with FastAPI, Celery worker, Redis, optional Beat and Flower.
-  Includes an OTLP collector (Grafana Alloy or similar) so traces from API and worker land in one
-  place for visualization with Grafana/Tempo.
-- **RabbitMQ comparison**: Optional broker profile for comparing delivery semantics and monitoring.
-- **Retries & idempotency**: Automatic retry with backoff for transient failures. The unique constraint
-  on `(owner_id, sku)` already provides idempotent upserts; retries would add resilience to transient
-  network or warehouse issues.
+- **Containerization** (partially done): `docker compose` with FastAPI, Celery worker, Redis, Flower,
+  and OTLP collector for traces. Celery Beat for scheduled tasks is a future addition.
+- **RabbitMQ comparison**: Optional broker profile for comparing delivery semantics and monitoring
+  with Redis.
