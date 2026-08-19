@@ -1,3 +1,4 @@
+import asyncio
 import csv
 from io import StringIO
 from typing import Protocol
@@ -14,7 +15,7 @@ class ImportJobStore(Protocol):
 
 
 class InventoryProductStore(Protocol):
-    def upsert(self, owner_id: UUID, product: ProductRow) -> None: ...
+    async def upsert(self, owner_id: UUID, product: ProductRow) -> None: ...
 
 
 def process_import(
@@ -43,7 +44,7 @@ def process_import(
         except ProductRowValidationError:
             failed += 1
             continue
-        product_store.upsert(job.owner_id, product)
+        asyncio.run(product_store.upsert(job.owner_id, product))
         processed += 1
 
     job.processed_rows = processed

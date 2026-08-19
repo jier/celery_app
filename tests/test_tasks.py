@@ -40,7 +40,7 @@ class FakeProductStore:
         self.upserted: list[ProductRow] = []
         self.failures: list[tuple[ProductRow, str | None]] = []
 
-    def upsert(self, owner_id: UUID, product: ProductRow) -> None:
+    async def upsert(self, owner_id: UUID, product: ProductRow) -> None:
         del owner_id
         self.upserted.append(product)
 

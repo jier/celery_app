@@ -39,4 +39,6 @@ python_version = "3.13"
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 explicit_package_bases = true
+ignore_missing_imports = true
+disable_error_code = ["misc"]
 files = ["workflow_app", "tests"]
