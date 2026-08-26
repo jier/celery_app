@@ -1,0 +1,4 @@
+celery[redis]>=5.4,<6
+eventlet>=0.38,<1
+flower>=2,<3
+numpy>=2,<3

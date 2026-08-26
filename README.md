@@ -18,6 +18,12 @@ Browser → FastAPI → Supabase (Postgres + Storage + Auth + Realtime)
 - **Idempotency** re-importing the same SKU updates quantity and price, never duplicates.
 - **Observability** OpenTelemetry traces across API → Redis → Worker → Supabase, plus structured logs with trace context.
 
+## Examples
+
+The original arithmetic-task Celery demo is available separately at
+[`examples/basic-celery/`](examples/basic-celery/). It is a standalone Redis,
+Celery Beat, and Flower example and is not part of the import application.
+
 ## Quick Start
 
 ### Prerequisites
