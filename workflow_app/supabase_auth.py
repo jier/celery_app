@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from supabase import create_client
+from supabase import acreate_client
 from workflow_app.models import User
 
 
@@ -13,7 +13,7 @@ class SupabaseAuthenticator:
 
     async def authenticate(self, access_token: str) -> User:
         try:
-            client = create_client(self._url, self._anon_key)
+            client = await acreate_client(self._url, self._anon_key)
             client.postgrest.auth(access_token)
             supabase_user = await client.auth.get_user(access_token)
         except Exception as exc:

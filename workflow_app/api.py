@@ -52,6 +52,17 @@ def create_app(
         dispatcher.enqueue(job.id)
         return job
 
+    @app.get("/imports/list", response_model_exclude_none=True)
+    async def list_imports(
+        authorization: Annotated[str, Header(alias="Authorization")],
+    ) -> list[ImportJob]:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing Bearer token")
+        token = authorization.removeprefix("Bearer ")
+
+        user = await auth.authenticate(token)
+        return await imports.list(owner_id=user.id)
+
     @app.get("/imports/{job_id}", response_model_exclude_none=True)
     async def get_import(
         job_id: UUID,
@@ -66,17 +77,6 @@ def create_app(
         if job is None:
             raise HTTPException(status_code=404, detail="Import job not found")
         return job
-
-    @app.get("/imports/list", response_model_exclude_none=True)
-    async def list_imports(
-        authorization: Annotated[str, Header(alias="Authorization")],
-    ) -> list[ImportJob]:
-        if not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Missing Bearer token")
-        token = authorization.removeprefix("Bearer ")
-
-        user = await auth.authenticate(token)
-        return await imports.list(owner_id=user.id)
 
     if products is not None:
 

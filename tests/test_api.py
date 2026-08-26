@@ -90,3 +90,20 @@ def test_owner_can_retrieve_their_import_job_status() -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "processing"
     assert response.json()["total_rows"] == 100
+
+
+def test_owner_can_list_import_jobs() -> None:
+    imports = FakeImports()
+    job = ImportJob(
+        id=UUID("00000000-0000-0000-0000-000000000099"),
+        owner_id=UUID("11111111-1111-1111-1111-111111111111"),
+        filename="big.csv",
+        status=JobStatus.PROCESSING,
+    )
+    imports._jobs[job.id] = job
+    client = TestClient(create_app(auth=FakeAuth(), imports=imports, dispatcher=FakeDispatcher()))
+
+    response = client.get("/imports/list", headers={"Authorization": "Bearer test-token"})
+
+    assert response.status_code == 200
+    assert response.json()[0]["id"] == str(job.id)

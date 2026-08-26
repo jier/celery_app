@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from supabase import create_client
+from supabase import acreate_client, create_client
 from workflow_app.models import ImportJob, ProductRow
 
 BUCKET = "import-files"
@@ -14,14 +14,14 @@ class SupabaseImportStore:
         self._key = key
         self._access_token = access_token
 
-    def _client(self) -> Any:
-        client = create_client(self._url, self._key)
+    async def _client(self) -> Any:
+        client = await acreate_client(self._url, self._key)
         if self._access_token:
             client.postgrest.auth(self._access_token)
         return client
 
     async def create(self, owner_id: UUID, filename: str, content: bytes) -> ImportJob:
-        client = self._client()
+        client = await self._client()
         result = (
             await client.table("import_jobs")
             .insert(
@@ -43,7 +43,7 @@ class SupabaseImportStore:
         return job
 
     async def get(self, owner_id: UUID, job_id: UUID) -> ImportJob | None:
-        client = self._client()
+        client = await self._client()
         result = (
             await client.table("import_jobs")
             .select("*")
@@ -59,7 +59,7 @@ class SupabaseImportStore:
         return ImportJob.from_supabase_row(result.data[0])
 
     async def list(self, owner_id: UUID) -> list[ImportJob]:
-        client = self._client()
+        client = await self._client()
         result = (
             await client.table("import_jobs")
             .select("*")
@@ -75,13 +75,16 @@ class SupabaseImportStore:
 
 class SupabaseProductStore:
     def __init__(self, url: str, service_role_key: str) -> None:
-        self._client = create_client(url, service_role_key)
         self._url = url
         self._service_role_key = service_role_key
 
+    async def _client(self) -> Any:
+        return await acreate_client(self._url, self._service_role_key)
+
     async def upsert(self, owner_id: UUID, product: ProductRow) -> None:
+        client = await self._client()
         await (
-            self._client.table("products")
+            client.table("products")
             .upsert(
                 {
                     "owner_id": str(owner_id),
@@ -96,8 +99,9 @@ class SupabaseProductStore:
         )
 
     async def list(self, owner_id: UUID) -> list[ProductRow]:
+        client = await self._client()
         result = (
-            await self._client.table("products")
+            await client.table("products")
             .select("*")
             .eq(
                 "owner_id",
